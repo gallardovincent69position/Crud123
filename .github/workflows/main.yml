@@ -13,11 +13,11 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
 
     steps:
-      # 1. Get the latest source code
+      # 1. Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Check Docker installation
+      # 2. Check Docker Installation
       - name: Check Docker
         shell: powershell
         run: |
@@ -58,6 +58,8 @@ jobs:
             throw "Docker Hub login failed!"
           }
 
+          Write-Host "Docker Hub login successful!"
+
       # 5. Build Ionic Vue Docker Image
       - name: Build Docker Image
         shell: powershell
@@ -67,6 +69,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "Docker image build failed!"
           }
+
+          Write-Host "Docker image built successfully!"
 
       # 6. Push Docker Image to Docker Hub
       - name: Push Docker Image
@@ -78,7 +82,9 @@ jobs:
             throw "Docker image push failed!"
           }
 
-      # 7. Stop and remove previous container
+          Write-Host "Docker image pushed successfully!"
+
+      # 7. Stop and Remove Previous Container
       - name: Stop Existing Container
         shell: powershell
         run: |
@@ -86,10 +92,19 @@ jobs:
 
           if ($container) {
             docker stop ionic-vue-app
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to stop existing container!"
+            }
+
             docker rm ionic-vue-app
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to remove existing container!"
+            }
           }
 
-      # 8. Pull latest Docker image
+      # 8. Pull Latest Docker Image
       - name: Pull Latest Docker Image
         shell: powershell
         run: |
@@ -99,7 +114,7 @@ jobs:
             throw "Docker image pull failed!"
           }
 
-      # 9. Run updated container
+      # 9. Run Updated Container
       - name: Run Updated Container
         shell: powershell
         run: |
@@ -113,7 +128,9 @@ jobs:
             throw "Container deployment failed!"
           }
 
-      # 10. Verify deployment
+          Write-Host "Container deployed successfully!"
+
+      # 10. Verify Deployment
       - name: Verify Deployment
         shell: powershell
         run: |
