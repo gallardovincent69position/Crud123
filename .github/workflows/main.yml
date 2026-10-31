@@ -12,18 +12,15 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # 1. Get the latest repository files
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Verify Dockerfile exists
       - name: Check Project Files
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "Current directory:"
           Write-Host $env:GITHUB_WORKSPACE
 
-          Write-Host "Project files:"
           Get-ChildItem $env:GITHUB_WORKSPACE
 
           if (!(Test-Path "$env:GITHUB_WORKSPACE/Dockerfile")) {
@@ -32,39 +29,30 @@ jobs:
 
           Write-Host "Dockerfile found!"
 
-      # 3. Login to Docker Hub
       - name: Login to Docker Hub
-        shell: pwsh
+        shell: powershell
         run: |
-          $env:DOCKERHUB_TOKEN | docker login `
-            -u $env:DOCKERHUB_USERNAME `
-            --password-stdin
+          $env:DOCKERHUB_TOKEN | docker login -u $env:DOCKERHUB_USERNAME --password-stdin
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 4. Build Docker Image
       - name: Build Docker Image
-        shell: pwsh
+        shell: powershell
         run: |
-          docker build `
-            -f "$env:GITHUB_WORKSPACE/Dockerfile" `
-            -t "$env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest" `
-            "$env:GITHUB_WORKSPACE"
+          docker build -f "$env:GITHUB_WORKSPACE/Dockerfile" -t "$env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest" "$env:GITHUB_WORKSPACE"
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
-      # 5. Push Image to Docker Hub
       - name: Push Docker Image
-        shell: pwsh
+        shell: powershell
         run: |
           docker push "$env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest"
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
-      # 6. Deploy Container
       - name: Deploy Application
-        shell: pwsh
+        shell: powershell
         run: |
           docker pull "$env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest"
 
