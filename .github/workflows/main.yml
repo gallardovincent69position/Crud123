@@ -1,0 +1,67 @@
+
+name: Ionic Vue CRUD - Docker Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      # 1. Get the latest source code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Login to Docker Hub
+      - name: Docker Hub Login
+        shell: powershell
+        run: |
+          $env:DOCKERHUB_TOKEN | docker login -u $env:DOCKERHUB_USERNAME --password-stdin
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 3. Build Docker Image
+      - name: Build Docker Image
+        shell: powershell
+        run: |
+          docker build -t $env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest .
+
+      # 4. Push Docker Image to Docker Hub
+      - name: Push Docker Image
+        shell: powershell
+        run: |
+          docker push $env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+      # 5. Stop old deployment container if present
+      - name: Remove Previous Deployment
+        shell: powershell
+        run: |
+          docker stop vincent-crud-app 2>$null
+          docker rm vincent-crud-app 2>$null
+        continue-on-error: true
+
+      # 6. Run New Container
+      - name: Deploy Docker Container
+        shell: powershell
+        run: |
+          docker run -d `
+            --name vincent-crud-app `
+            --restart unless-stopped `
+            -p 8081:80 `
+            $env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+      # 7. Verify Deployment
+      - name: Verify Docker Deployment
+        shell: powershell
+        run: |
+          docker ps --filter "name=vincent-crud-app"
