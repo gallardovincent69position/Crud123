@@ -13,6 +13,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
 
     steps:
+
       # 1. Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -27,17 +28,31 @@ jobs:
             throw "Docker is not installed or unavailable!"
           }
 
-      # 3. Verify Dockerfile
-      - name: Check Dockerfile
+      # 3. Check Docker Engine
+      - name: Check Docker Engine
+        shell: powershell
+        run: |
+          docker info
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Docker Engine is not running!"
+          }
+
+      # 4. Verify Required Files
+      - name: Check Project Files
         shell: powershell
         run: |
           if (!(Test-Path "$env:GITHUB_WORKSPACE/Dockerfile")) {
-            throw "Dockerfile not found in repository root!"
+            throw "Dockerfile not found!"
           }
 
-          Write-Host "Dockerfile found!"
+          if (!(Test-Path "$env:GITHUB_WORKSPACE/package.json")) {
+            throw "package.json not found!"
+          }
 
-      # 4. Login to Docker Hub
+          Write-Host "Required project files found!"
+
+      # 5. Login to Docker Hub
       - name: Login to Docker Hub
         shell: powershell
         env:
@@ -52,6 +67,9 @@ jobs:
             throw "Docker Hub token secret is missing!"
           }
 
+          Write-Host "Docker Hub username configured."
+          Write-Host "Token length: $($env:DOCKERHUB_TOKEN.Length)"
+
           $env:DOCKERHUB_TOKEN | docker login -u $env:DOCKERHUB_USERNAME --password-stdin
 
           if ($LASTEXITCODE -ne 0) {
@@ -60,11 +78,12 @@ jobs:
 
           Write-Host "Docker Hub login successful!"
 
-      # 5. Build Ionic Vue Docker Image
+      # 6. Build Ionic Vue Docker Image
       - name: Build Docker Image
         shell: powershell
         run: |
-          docker build -t cedricbakin06/ionic-vue-firebase-crud:latest .
+          docker build `
+            -t cedricbakin06/ionic-vue-firebase-crud:latest .
 
           if ($LASTEXITCODE -ne 0) {
             throw "Docker image build failed!"
@@ -72,7 +91,7 @@ jobs:
 
           Write-Host "Docker image built successfully!"
 
-      # 6. Push Docker Image to Docker Hub
+      # 7. Push Docker Image to Docker Hub
       - name: Push Docker Image
         shell: powershell
         run: |
@@ -84,7 +103,17 @@ jobs:
 
           Write-Host "Docker image pushed successfully!"
 
-      # 7. Stop and Remove Previous Container
+      # 8. Pull Latest Docker Image
+      - name: Pull Latest Docker Image
+        shell: powershell
+        run: |
+          docker pull cedricbakin06/ionic-vue-firebase-crud:latest
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Docker image pull failed!"
+          }
+
+      # 9. Stop Existing Container
       - name: Stop Existing Container
         shell: powershell
         run: |
@@ -104,17 +133,7 @@ jobs:
             }
           }
 
-      # 8. Pull Latest Docker Image
-      - name: Pull Latest Docker Image
-        shell: powershell
-        run: |
-          docker pull cedricbakin06/ionic-vue-firebase-crud:latest
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Docker image pull failed!"
-          }
-
-      # 9. Run Updated Container
+      # 10. Deploy Updated Container
       - name: Run Updated Container
         shell: powershell
         run: |
@@ -130,19 +149,30 @@ jobs:
 
           Write-Host "Container deployed successfully!"
 
-      # 10. Verify Deployment
+      # 11. Verify Deployment
       - name: Verify Deployment
         shell: powershell
         run: |
           Start-Sleep -Seconds 5
 
-          $container = docker ps --filter "name=^ionic-vue-app$" --filter "status=running" -q
+          $container = docker ps `
+            --filter "name=^ionic-vue-app$" `
+            --filter "status=running" -q
 
           if (!$container) {
             docker logs ionic-vue-app
             throw "Container is not running!"
           }
 
-          Write-Host "Container successfully deployed!"
+          Write-Host "Deployment successful!"
 
           docker ps
+
+      # 12. Logout from Docker Hub
+      - name: Logout from Docker Hub
+        if: always()
+        shell: powershell
+        run: |
+          docker logout
+
+          Write-Host "Docker Hub logout completed!"
