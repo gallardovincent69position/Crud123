@@ -13,42 +13,31 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # 1. Get the latest source code
+      # 1. Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Login to Docker Hub
-      - name: Docker Hub Login
-        shell: powershell
-        run: |
-          $env:DOCKERHUB_TOKEN | docker login -u $env:DOCKERHUB_USERNAME --password-stdin
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # 3. Build Docker Image
+      # 2. Build Docker Image
       - name: Build Docker Image
         shell: powershell
         run: |
-          docker build -t $env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest .
+          docker build -t cedricbakin06/vincent-ionic-crud:latest .
 
-      # 4. Push Docker Image to Docker Hub
+      # 3. Push Docker Image to Docker Hub
       - name: Push Docker Image
         shell: powershell
         run: |
-          docker push $env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          docker push cedricbakin06/vincent-ionic-crud:latest
 
-      # 5. Stop old deployment container if present
+      # 4. Remove Previous Deployment
       - name: Remove Previous Deployment
         shell: powershell
         run: |
           docker stop vincent-crud-app 2>$null
           docker rm vincent-crud-app 2>$null
-        continue-on-error: true
+          exit 0
 
-      # 6. Run New Container
+      # 5. Deploy New Container
       - name: Deploy Docker Container
         shell: powershell
         run: |
@@ -56,11 +45,9 @@ jobs:
             --name vincent-crud-app `
             --restart unless-stopped `
             -p 8081:80 `
-            $env:DOCKERHUB_USERNAME/vincent-ionic-crud:latest
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+            cedricbakin06/vincent-ionic-crud:latest
 
-      # 7. Verify Deployment
+      # 6. Verify Deployment
       - name: Verify Docker Deployment
         shell: powershell
         run: |
