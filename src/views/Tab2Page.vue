@@ -12,7 +12,7 @@
         </ion-toolbar>
       </ion-header>
 
-      <ExploreContainer name="Tab 33 page" />
+      <ExploreContainer name="Tab 33 kjehvfuidspage" />
     </ion-content>
   </ion-page>
 </template>
